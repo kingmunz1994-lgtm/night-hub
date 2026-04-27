@@ -1,0 +1,12 @@
+{
+  "name": "night-hub",
+  "version": "0.1.0",
+  "description": "Night Hub — central landing page for the Night ecosystem on Midnight Network",
+  "scripts": {
+    "dev": "npx serve public -p 3009",
+    "build": "cp -r public dist"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}
