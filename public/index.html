@@ -2,302 +2,163 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Night · Privacy-First Apps on Midnight Network</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Night Hub — Private OS on Midnight</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@400;700;900&display=swap"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap"/>
 <link rel="stylesheet" href="css/hub.css"/>
 </head>
 <body>
 
-<nav>
-  <div class="nav-logo">Night <span>Hub</span></div>
-  <div class="nav-right">
-    <a class="btn btn-ghost btn-sm" href="https://kingmunz1994-lgtm.github.io/night-poker/" target="_blank">Poker</a>
-    <a class="btn btn-ghost btn-sm" href="https://kingmunz1994-lgtm.github.io/night-fun/" target="_blank">Fun</a>
-    <a class="btn btn-ghost btn-sm" href="https://kingmunz1994-lgtm.github.io/night-markets/" target="_blank">Markets</a>
-    <button class="btn btn-primary btn-sm" onclick="connectDemo()">
-      <span id="wallet-dot" class="dot dot-off"></span>
-      <span id="wallet-label">Sign in</span>
+<!-- ══ LANDING (pre-connect) ══════════════════════════════════════════════════ -->
+<div id="view-landing">
+  <div class="ambient"><div class="amb a1"></div><div class="amb a2"></div><div class="amb a3"></div></div>
+
+  <nav class="l-nav">
+    <div class="l-logo">⊘ <span>Night</span></div>
+    <div class="l-nav-r">
+      <a href="https://midnight.network" target="_blank" class="l-link">Midnight Network ↗</a>
+      <button class="btn-connect" onclick="openConnect()">Connect Wallet</button>
+    </div>
+  </nav>
+
+  <div class="l-hero">
+    <div class="l-badge"><span class="pdot"></span>Midnight Network · Kūkolu Mainnet · Live</div>
+    <h1 class="l-title">Your private<br><em>on-chain OS.</em></h1>
+    <p class="l-sub">Ten apps. One identity. Zero traces.<br>The largest dApp ecosystem on Midnight — every action ZK-sealed by default.</p>
+    <div class="l-btns">
+      <button class="btn-hero" onclick="openConnect()">Enter Night →</button>
+      <button class="btn-hero-ghost" onclick="connectDemo()">🎭 Demo Mode</button>
+    </div>
+  </div>
+
+  <div class="l-app-strip">
+    <div class="l-app-strip-inner" id="l-strip"></div>
+  </div>
+
+  <div class="l-section-label">Ten Apps. One Stack.</div>
+  <div class="l-cards" id="l-cards"></div>
+
+  <footer class="l-footer">
+    <div class="l-footer-logo">⊘ Night</div>
+    <div class="l-footer-links" id="l-footer-links"></div>
+    <div class="l-footer-copy">Built on Midnight Network · MIT License</div>
+  </footer>
+</div>
+
+<!-- ══ DASHBOARD (post-connect) ══════════════════════════════════════════════ -->
+<div id="view-dashboard" class="hidden">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">⊘</div>
+    <nav class="sb-nav">
+      <button class="sb-btn active" id="sb-home"     onclick="setTab('home')"     title="Dashboard">🏠</button>
+      <button class="sb-btn"        id="sb-apps"     onclick="setTab('apps')"     title="All Apps">⬛</button>
+      <button class="sb-btn"        id="sb-activity" onclick="setTab('activity')" title="Activity">⚡</button>
+    </nav>
+    <div class="sb-foot">
+      <button class="sb-btn sb-disc" onclick="disconnect()" title="Disconnect">⊗</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="d-main">
+
+    <!-- Header -->
+    <header class="d-header">
+      <div class="dh-id">
+        <div class="dh-name" id="dh-name">—</div>
+        <div class="dh-addr" id="dh-addr">—</div>
+      </div>
+      <div class="dh-score" id="dh-score">
+        <span id="dh-emoji">⬜</span>
+        <span id="dh-pts">0 pts</span>
+        <span class="dh-lvl" id="dh-lvl">Contributor</span>
+      </div>
+      <div class="dh-net"><span class="pdot"></span>Midnight</div>
+    </header>
+
+    <!-- ── Tab: Home ──────────────────────────────────────────────── -->
+    <div id="tab-home" class="tab">
+
+      <div class="card-row">
+
+        <!-- Identity -->
+        <div class="d-card id-card">
+          <div class="card-lbl">Night Identity</div>
+          <div class="id-top">
+            <div class="id-ava" id="id-ava">🌙</div>
+            <div>
+              <div class="id-name" id="id-name">—</div>
+              <div class="id-did"  id="id-did">—</div>
+            </div>
+          </div>
+          <div class="id-chains" id="id-chains"></div>
+          <a class="card-link" href="https://kingmunz1994-lgtm.github.io/night-id/" target="_blank">Manage identity →</a>
+        </div>
+
+        <!-- Score -->
+        <div class="d-card sc-card">
+          <div class="card-lbl">Night Score</div>
+          <div class="sc-big" id="sc-big">0</div>
+          <div class="sc-badge" id="sc-badge">⬜ Contributor</div>
+          <div class="sc-track"><div class="sc-fill" id="sc-fill" style="width:0%"></div></div>
+          <div class="sc-next" id="sc-next">100 pts to Builder</div>
+          <div class="sc-items" id="sc-items"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="d-card stat-card">
+          <div class="card-lbl">At a Glance</div>
+          <div class="stats-g">
+            <div class="sg-item"><div class="sg-v" id="sg-zk">—</div><div class="sg-l">ZK Proofs</div></div>
+            <div class="sg-item"><div class="sg-v" id="sg-apps">—</div><div class="sg-l">Apps Used</div></div>
+            <div class="sg-item"><div class="sg-v" id="sg-night">—</div><div class="sg-l">NIGHT Earned</div></div>
+            <div class="sg-item"><div class="sg-v" id="sg-chains">—</div><div class="sg-l">Chains</div></div>
+          </div>
+          <div class="demo-note" id="demo-note" style="display:none">🎭 Demo data</div>
+        </div>
+
+      </div>
+
+      <!-- App tiles -->
+      <div class="sec-title">Apps <span class="sec-count" id="app-count">10</span></div>
+      <div class="app-tiles" id="app-tiles"></div>
+
+      <!-- Live feed -->
+      <div class="sec-title">Live on Midnight <span class="feed-dot" id="feed-dot">●</span> <span class="feed-status" id="feed-status">connecting…</span></div>
+      <div class="feed" id="feed-home"></div>
+
+    </div>
+
+    <!-- ── Tab: Apps ──────────────────────────────────────────────── -->
+    <div id="tab-apps" class="tab hidden">
+      <div class="apps-grid-full" id="apps-grid-full"></div>
+    </div>
+
+    <!-- ── Tab: Activity ─────────────────────────────────────────── -->
+    <div id="tab-activity" class="tab hidden">
+      <div class="sec-title">All Activity</div>
+      <div class="feed feed-full" id="feed-activity"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ CONNECT MODAL ══════════════════════════════════════════════════════════ -->
+<div class="m-overlay hidden" id="m-connect" onclick="if(event.target===this)closeConnect()">
+  <div class="m-box">
+    <button class="m-x" onclick="closeConnect()">✕</button>
+    <div class="m-icon">🌙</div>
+    <div class="m-title">Enter Night</div>
+    <div class="m-sub">Connect your Midnight wallet to access the dashboard</div>
+    <button class="btn-full-primary" id="lace-btn" onclick="connectMidnight()">
+      <span id="lace-txt">⊘ Connect Lace / 1AM / Nocturne</span>
     </button>
-  </div>
-</nav>
-
-<div id="toast-wrap"></div>
-
-<!-- ══ HERO ══════════════════════════════════════════════════════ -->
-<section class="hero">
-  <div class="hero-tag">
-    <div class="zk-dot"></div>
-    Midnight Network · ZK-Private · Built on Cardano
-  </div>
-  <h1>Privacy is the<br><em>point.</em></h1>
-  <p>Night is a suite of privacy-first apps built natively on the Midnight Network. Every action is cryptographically sealed. No wallet addresses. No purchase history. No one knows your balance.</p>
-  <div class="hero-btns">
-    <button class="btn btn-primary btn-lg" onclick="document.getElementById('apps').scrollIntoView({behavior:'smooth'})">Explore Night →</button>
-    <button class="btn btn-ghost btn-lg" onclick="connectDemo()">🎭 Try Demo</button>
-  </div>
-  <div class="hero-stack">
-    <div class="stack-pill">XOR Mental Poker</div>
-    <div class="stack-pill">ZK Commitments</div>
-    <div class="stack-pill">Compact v0.20</div>
-    <div class="stack-pill">NIGHT Token</div>
-    <div class="stack-pill">tDUST Fees</div>
-    <div class="stack-pill">State Channels</div>
-  </div>
-</section>
-
-<!-- ══ NIGHT SCORE ════════════════════════════════════════════════ -->
-<section class="score-strip" id="score-strip" style="display:none;">
-  <div class="score-inner">
-    <div class="score-avatar" id="score-avatar">🌙</div>
-    <div class="score-info">
-      <div class="score-address" id="score-address">midnight1…</div>
-      <div class="score-bar-wrap">
-        <div class="score-bar-fill" id="score-bar" style="width:0%"></div>
-      </div>
-      <div class="score-level" id="score-level">Night Score: 0</div>
-    </div>
-    <div class="score-stats">
-      <div class="score-stat"><div class="ss-val" id="sc-hands">0</div><div class="ss-lbl">Hands</div></div>
-      <div class="score-stat"><div class="ss-val" id="sc-tokens">0</div><div class="ss-lbl">Tokens launched</div></div>
-      <div class="score-stat"><div class="ss-val" id="sc-zk">0</div><div class="ss-lbl">ZK proofs</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ APPS ══════════════════════════════════════════════════════ -->
-<section class="apps-section" id="apps">
-  <div class="section-label">The Night Ecosystem</div>
-  <h2>Eight apps. One stack. Zero traces.</h2>
-
-  <div class="apps-grid">
-
-    <a class="app-card app-poker" href="https://kingmunz1994-lgtm.github.io/night-poker/" target="_blank">
-      <div class="app-icon">🃏</div>
-      <div class="app-name">Night Poker</div>
-      <div class="app-tagline">Provably fair Texas Hold'em</div>
-      <div class="app-desc">XOR mental poker — no trusted dealer. Every shuffle cryptographically committed by the players. ZK proof at showdown.</div>
-      <div class="app-tags">
-        <span class="tag">Mental Poker</span>
-        <span class="tag">ZK Showdown</span>
-        <span class="tag new">⚡ Quick Deal</span>
-      </div>
-      <div class="app-cta">Play now →</div>
-    </a>
-
-    <a class="app-card app-fun" href="https://kingmunz1994-lgtm.github.io/night-fun/" target="_blank">
-      <div class="app-icon">🚀</div>
-      <div class="app-name">Night Fun</div>
-      <div class="app-tagline">ZK token launchpad</div>
-      <div class="app-desc">Launch a token in 60 seconds. All buys are anonymous. Bonding curve + merch revenue shared to holders. pump.fun but private.</div>
-      <div class="app-tags">
-        <span class="tag">Bonding Curve</span>
-        <span class="tag">Anonymous Trades</span>
-        <span class="tag">Revenue Share</span>
-      </div>
-      <div class="app-cta">Launch →</div>
-    </a>
-
-    <a class="app-card app-markets" href="https://kingmunz1994-lgtm.github.io/night-markets/" target="_blank">
-      <div class="app-icon">🛒</div>
-      <div class="app-name">Night Markets</div>
-      <div class="app-tagline">Private global marketplace</div>
-      <div class="app-desc">Buy anything from anywhere. ZK escrow, sealed-bid auctions, Pay-in-4 BNPL. No purchase history. No identity leakage.</div>
-      <div class="app-tags">
-        <span class="tag">ZK Escrow</span>
-        <span class="tag">BNPL</span>
-        <span class="tag">Sealed Auctions</span>
-      </div>
-      <div class="app-cta">Shop →</div>
-    </a>
-
-    <a class="app-card app-id" href="https://kingmunz1994-lgtm.github.io/night-id/" target="_blank">
-      <div class="app-icon">🪪</div>
-      <div class="app-name">Night ID</div>
-      <div class="app-tagline">ZK identity & .night names</div>
-      <div class="app-desc">Claim a .night name. Prove age, residency, or credentials with ZK proofs — without revealing any underlying data.</div>
-      <div class="app-tags">
-        <span class="tag">.night Names</span>
-        <span class="tag">ZK Credentials</span>
-      </div>
-      <div class="app-cta">Claim name →</div>
-    </a>
-
-    <a class="app-card app-save" href="https://kingmunz1994-lgtm.github.io/night-save/" target="_blank">
-      <div class="app-icon">🏦</div>
-      <div class="app-name">Night Save</div>
-      <div class="app-tagline">ZK collateral vault + sUSD</div>
-      <div class="app-desc">Deposit NIGHT, mint sUSD stablecoins. Prove your vault is healthy with ZK without revealing your collateral size. BNPL instalments included.</div>
-      <div class="app-tags">
-        <span class="tag">80% LTV</span>
-        <span class="tag">sUSD Mint</span>
-        <span class="tag">BNPL</span>
-      </div>
-      <div class="app-cta">Open vault →</div>
-    </a>
-
-    <a class="app-card app-lend" href="https://kingmunz1994-lgtm.github.io/night-lend/" target="_blank">
-      <div class="app-icon">💸</div>
-      <div class="app-name">Night Lend</div>
-      <div class="app-tagline">Private DeFi lending</div>
-      <div class="app-desc">Deposit to earn yield. Borrow at 75% LTV. Prove solvency in ZK — lenders know you're healthy, nobody knows your balance.</div>
-      <div class="app-tags">
-        <span class="tag">75% LTV</span>
-        <span class="tag">18.4% APY</span>
-        <span class="tag">ZK Health</span>
-      </div>
-      <div class="app-cta">Lend →</div>
-    </a>
-
-    <a class="app-card app-work" href="https://kingmunz1994-lgtm.github.io/night-work/" target="_blank">
-      <div class="app-icon">⚙️</div>
-      <div class="app-name">Night Work</div>
-      <div class="app-tagline">ZK task marketplace</div>
-      <div class="app-desc">AI agents post bounties. Humans earn NIGHT completing them. Worker identities are ZK commitments — nobody knows who did the work until they claim.</div>
-      <div class="app-tags">
-        <span class="tag">AI Bounties</span>
-        <span class="tag">ZK Workers</span>
-        <span class="tag">NIGHT Rewards</span>
-      </div>
-      <div class="app-cta">Find work →</div>
-    </a>
-
-    <a class="app-card app-biz" href="https://kingmunz1994-lgtm.github.io/night-biz/" target="_blank">
-      <div class="app-icon">🏢</div>
-      <div class="app-name">Night Biz</div>
-      <div class="app-tagline">Business loyalty tokens</div>
-      <div class="app-desc">Any business from café to enterprise can issue private loyalty tokens. Customers prove Bronze/Silver/Gold/Platinum tier without revealing their balance.</div>
-      <div class="app-tags">
-        <span class="tag">ZK Tiers</span>
-        <span class="tag">Revenue Share</span>
-        <span class="tag">Any Scale</span>
-      </div>
-      <div class="app-cta">Launch token →</div>
-    </a>
-
-  </div>
-</section>
-
-<!-- ══ HOW THE STACK WORKS ════════════════════════════════════════ -->
-<section class="how-section">
-  <div class="section-label">The Technology</div>
-  <h2>How Midnight makes this possible</h2>
-  <div class="how-grid">
-    <div class="how-card">
-      <div class="how-icon">🔐</div>
-      <div class="how-title">Compact Circuits</div>
-      <div class="how-body">Every app's logic lives in a Compact v0.20 contract on Midnight. Circuits generate ZK proofs client-side — the chain sees only a proof, never your data.</div>
-    </div>
-    <div class="how-card">
-      <div class="how-icon">🪙</div>
-      <div class="how-title">NIGHT + DUST</div>
-      <div class="how-body">NIGHT is the public utility token. Holding NIGHT generates DUST, which pays for private transaction fees. Stake ADA to a Midnight-enabled pool to earn NIGHT automatically.</div>
-    </div>
-    <div class="how-card">
-      <div class="how-icon">⚡</div>
-      <div class="how-title">State Channels</div>
-      <div class="how-body">Betting rounds, task updates, and marketplace negotiations run off-chain at web speed. Only the final signed root settles on Midnight — no gas per click.</div>
-    </div>
-    <div class="how-card">
-      <div class="how-icon">🏗️</div>
-      <div class="how-title">Built on Cardano</div>
-      <div class="how-body">Midnight is a partner chain to Cardano. Cardano SPOs run Midnight validators — ADA delegators to those pools earn both ADA staking rewards and NIGHT.</div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ NIGHT SCORE ════════════════════════════════════════════════ -->
-<section class="night-score-section">
-  <div class="section-label">Cross-App Reputation</div>
-  <h2>Night Score</h2>
-  <p style="max-width:520px;margin:0 auto 32px;color:var(--text2);font-size:14px;line-height:1.7;">
-    One score across every Night app. Play poker, launch tokens, lend, shop — every on-chain action raises your Night Score and unlocks better tiers.
-  </p>
-  <div class="ns-tiers">
-    <div class="ns-tier">
-      <div class="ns-tier-icon">🥉</div>
-      <div class="ns-tier-name">Bronze</div>
-      <div class="ns-tier-score">100+</div>
-      <div class="ns-tier-perks">Reduced fees · Basic cosmetics</div>
-    </div>
-    <div class="ns-tier">
-      <div class="ns-tier-icon">🥈</div>
-      <div class="ns-tier-name">Silver</div>
-      <div class="ns-tier-score">500+</div>
-      <div class="ns-tier-perks">Priority tables · Rare items</div>
-    </div>
-    <div class="ns-tier">
-      <div class="ns-tier-icon">🥇</div>
-      <div class="ns-tier-name">Gold</div>
-      <div class="ns-tier-score">2,000+</div>
-      <div class="ns-tier-perks">2× revenue boost · VIP rooms</div>
-    </div>
-    <div class="ns-tier">
-      <div class="ns-tier-icon">💎</div>
-      <div class="ns-tier-name">Platinum</div>
-      <div class="ns-tier-score">10,000+</div>
-      <div class="ns-tier-perks">Governance · Exclusive access</div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ ADA + NIGHT FLYWHEEL ════════════════════════════════════════ -->
-<section class="flywheel-section">
-  <div class="section-label">The Flywheel</div>
-  <h2>Stake ADA → Earn NIGHT → Use Night</h2>
-  <div class="flywheel">
-    <div class="fw-step">
-      <div class="fw-num">1</div>
-      <div class="fw-title">Stake ADA</div>
-      <div class="fw-body">Delegate to a Midnight-enabled Cardano pool. Earn normal ADA staking rewards plus NIGHT token distribution.</div>
-    </div>
-    <div class="fw-arrow">→</div>
-    <div class="fw-step">
-      <div class="fw-num">2</div>
-      <div class="fw-title">Hold NIGHT</div>
-      <div class="fw-body">NIGHT generates DUST passively. DUST pays for private tx fees across all Night apps — poker hands, marketplace purchases, token launches.</div>
-    </div>
-    <div class="fw-arrow">→</div>
-    <div class="fw-step">
-      <div class="fw-num">3</div>
-      <div class="fw-title">Use Night</div>
-      <div class="fw-body">Play poker, launch tokens, shop, lend, work. Build Night Score. Unlock tiers, cosmetics, revenue share, and governance.</div>
-    </div>
-    <div class="fw-arrow">→</div>
-    <div class="fw-step">
-      <div class="fw-num">4</div>
-      <div class="fw-title">Earn More</div>
-      <div class="fw-body">Revenue from Night Fun merch, poker rake rebates, lending yield, and task rewards all flow back as NIGHT or sUSD.</div>
-    </div>
-  </div>
-</section>
-
-<!-- ══ FOOTER ═════════════════════════════════════════════════════ -->
-<footer>
-  <div class="footer-logo">Night <span>Hub</span></div>
-  <div class="footer-links">
-    <a href="https://kingmunz1994-lgtm.github.io/night-poker/" target="_blank">Poker</a>
-    <a href="https://kingmunz1994-lgtm.github.io/night-fun/" target="_blank">Fun</a>
-    <a href="https://kingmunz1994-lgtm.github.io/night-markets/" target="_blank">Markets</a>
-    <a href="https://kingmunz1994-lgtm.github.io/night-id/" target="_blank">ID</a>
-    <a href="https://kingmunz1994-lgtm.github.io/night-save/" target="_blank">Save</a>
-    <a href="https://kingmunz1994-lgtm.github.io/night-lend/" target="_blank">Lend</a>
-    <a href="https://kingmunz1994-lgtm.github.io/night-work/" target="_blank">Work</a>
-    <a href="https://kingmunz1994-lgtm.github.io/night-biz/" target="_blank">Biz</a>
-    <a href="https://github.com/kingmunz1994-lgtm" target="_blank">GitHub</a>
-  </div>
-  <div class="footer-copy">Built on Midnight Network · Compact v0.20 · MIT License</div>
-</footer>
-
-<div class="overlay" id="ov-wallet" onclick="if(event.target===this)closeModal('ov-wallet')">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('ov-wallet')">✕</button>
-    <div class="wc-icon">🌙</div>
-    <div class="wc-title">Connect to Night</div>
-    <div class="wc-sub">Connect a Midnight wallet to track your Night Score across all apps.</div>
-    <button class="btn btn-primary btn-full btn-lg" onclick="connectDemo()">🎭 Try Demo Mode</button>
-    <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;">Demo mode · no real funds</div>
+    <div class="m-or">or</div>
+    <button class="btn-full-ghost" onclick="connectDemo()">🎭 Try Demo Mode</button>
+    <div class="m-note">Demo uses simulated data — no wallet required</div>
   </div>
 </div>
 

@@ -1,80 +1,383 @@
-// ── Night Hub — JS ────────────────────────────────────────────
+// ── Night Hub ─────────────────────────────────────────────────────────────────
 
-const nightScore = JSON.parse(localStorage.getItem('night_score') || '{"score":0,"hands":0,"tokens":0,"zk":0}');
+const NIGHT_ID_API   = 'https://night-id-api.fly.dev';
+const MIDNIGHT_INDEX = 'https://indexer.preprod.midnight.network/api/v3/graphql';
+const NIGHT_CONTRACT = '7473b82b398f6b8665541862a1165c6c5da379355f9c32dace36ed234b7cc711';
 
-let walletState = { connected: false, demo: false, address: null };
+// ── App registry ──────────────────────────────────────────────────────────────
+const APPS = [
+  { id:'markets', icon:'🛒', name:'Night Markets', tag:'ZK escrow marketplace',   url:'https://kingmunz1994-lgtm.github.io/night-markets/', desc:'Buy and sell anything privately. ZK escrow lifecycle — createListing → fundEscrow → releaseEscrow. Live on Midnight Preprod.' },
+  { id:'poker',   icon:'🃏', name:'Night Poker',   tag:'Provably fair Hold\'em',   url:'https://kingmunz1994-lgtm.github.io/night-poker/',  desc:'XOR mental poker — no trusted dealer. Private hole cards. ZK proof at showdown. WebSocket room management.' },
+  { id:'fun',     icon:'🚀', name:'Night Fun',     tag:'ZK token launchpad',       url:'https://kingmunz1994-lgtm.github.io/night-fun/',    desc:'Launch a token in 60 seconds. Anonymous buys. Bonding curve + epoch revenue sharing to holders.' },
+  { id:'id',      icon:'🪪', name:'Night ID',      tag:'Multi-chain ZK identity',  url:'https://kingmunz1994-lgtm.github.io/night-id/',     desc:'Score your on-chain history across ETH, SOL, ADA, Midnight. Issue W3C credentials. Claim a .night name.' },
+  { id:'lend',    icon:'💸', name:'Night Lend',    tag:'ZK DeFi lending',          url:'https://kingmunz1994-lgtm.github.io/night-lend/',   desc:'Deposit to earn yield. Borrow at 75% LTV. Prove solvency in ZK — lenders see you\'re healthy, not your balance.' },
+  { id:'save',    icon:'🏦', name:'Night Save',    tag:'ZK vault + sUSD',          url:'https://kingmunz1994-lgtm.github.io/night-save/',   desc:'Deposit NIGHT, mint sUSD stablecoin. Prove vault health in ZK. BNPL instalments included.' },
+  { id:'work',    icon:'⚙️',  name:'Night Work',    tag:'ZK task marketplace',      url:'https://kingmunz1994-lgtm.github.io/night-work/',   desc:'AI agents post bounties. Humans earn NIGHT completing them. Worker identities are ZK commitments.' },
+  { id:'biz',     icon:'🏢', name:'Night Biz',     tag:'ZK loyalty tokens',        url:'https://kingmunz1994-lgtm.github.io/night-biz/',    desc:'Any business issues private loyalty tokens. Customers prove Bronze/Silver/Gold/Platinum tier without revealing balance.' },
+  { id:'store',   icon:'👕', name:'Night Store',   tag:'ZK merch shop',            url:'https://kingmunz1994-lgtm.github.io/night-store/',  desc:'Branded merch storefront. 50% of every sale flows automatically to token holders via Night Fun revenue circuits.' },
+];
 
-// ── Toast ─────────────────────────────────────────────────────
-function toast(msg, type = 'info') {
-  const wrap = document.getElementById('toast-wrap');
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  wrap.appendChild(t);
-  setTimeout(() => t.remove(), 3200);
+const LEVELS = [
+  {min:0,   name:'Contributor', emoji:'⬜'},
+  {min:100, name:'Builder',     emoji:'🟣'},
+  {min:300, name:'Maker',       emoji:'🔵'},
+  {min:600, name:'Founder',     emoji:'🟢'},
+  {min:1000,name:'Architect',   emoji:'🌟'},
+];
+
+function getLevel(score) {
+  return [...LEVELS].reverse().find(l => score >= l.min) || LEVELS[0];
 }
 
-// ── Wallet ────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = { connected:false, demo:false, address:null, nightName:null, score:null };
+
+// ── Landing init ──────────────────────────────────────────────────────────────
+function initLanding() {
+  // App strip (doubled for infinite scroll)
+  const strip = document.getElementById('l-strip');
+  if (strip) {
+    const pills = [...APPS, ...APPS].map(a =>
+      `<div class="strip-pill">${a.icon} ${a.name}</div>`
+    ).join('');
+    strip.innerHTML = pills;
+  }
+
+  // Landing cards
+  const cards = document.getElementById('l-cards');
+  if (cards) {
+    cards.innerHTML = APPS.map(a =>
+      `<a class="l-card" href="${a.url}" target="_blank">
+        <div class="l-card-icon">${a.icon}</div>
+        <div class="l-card-name">${a.name}</div>
+        <div class="l-card-tag">${a.tag}</div>
+      </a>`
+    ).join('');
+  }
+
+  // Footer links
+  const fl = document.getElementById('l-footer-links');
+  if (fl) {
+    fl.innerHTML = APPS.map(a =>
+      `<a href="${a.url}" target="_blank">${a.name.replace('Night ','')}</a>`
+    ).join('');
+  }
+}
+
+// ── Connect modal ─────────────────────────────────────────────────────────────
+function openConnect()  { document.getElementById('m-connect')?.classList.remove('hidden'); }
+function closeConnect() { document.getElementById('m-connect')?.classList.add('hidden'); }
+
+async function connectMidnight() {
+  const btn = document.getElementById('lace-btn');
+  const txt = document.getElementById('lace-txt');
+  btn.disabled = true;
+  txt.innerHTML = '<div class="spinner"></div> Connecting…';
+
+  try {
+    if (!window.midnight) throw new Error('No Midnight wallet found — install Lace, 1AM, or Nocturne');
+
+    let walletEntry = null;
+    // Try mnLace first (Lace legacy), then UUID-based wallets
+    if (window.midnight.mnLace?.connect) {
+      walletEntry = window.midnight.mnLace;
+    } else {
+      const key = Object.keys(window.midnight).find(k => window.midnight[k]?.connect);
+      if (key) walletEntry = window.midnight[key];
+    }
+    if (!walletEntry) throw new Error('No compatible Midnight wallet found');
+
+    let api = null;
+    for (const net of ['mainnet','preprod','undeployed']) {
+      try { api = await walletEntry.connect(net); if (api) break; } catch(e) {}
+    }
+    if (!api) throw new Error('Connection rejected');
+
+    let address = null;
+    try { address = await api.getUnshieldedAddress(); } catch(e) {}
+    if (!address) {
+      try { const sr = await api.getShieldedAddresses(); address = sr?.shieldedAddress || null; } catch(e) {}
+    }
+    if (!address) throw new Error('Could not retrieve address');
+
+    state = { connected:true, demo:false, address, nightName:null, score:null };
+    closeConnect();
+    enterDashboard();
+  } catch(err) {
+    txt.innerHTML = '⊘ ' + (err.message || 'Connection failed');
+    btn.disabled = false;
+    setTimeout(() => { txt.innerHTML = '⊘ Connect Lace / 1AM / Nocturne'; btn.disabled = false; }, 3000);
+  }
+}
+
 function connectDemo() {
-  walletState = {
-    connected: true, demo: true,
-    address: 'midnight1' + Math.random().toString(36).slice(2, 10),
-  };
-  closeModal('ov-wallet');
-  updateWalletUI();
-  showScoreStrip();
-  toast('🎭 Demo wallet connected', 'success');
+  const demoAddr = '0x' + Array.from({length:40},()=>'0123456789abcdef'[Math.floor(Math.random()*16)]).join('');
+  state = { connected:true, demo:true, address:demoAddr, nightName:'demo.night', score:null };
+  closeConnect();
+  enterDashboard();
 }
 
-function updateWalletUI() {
-  const dot = document.getElementById('wallet-dot');
-  const lbl = document.getElementById('wallet-label');
-  if (!dot || !lbl) return;
-  if (walletState.connected) {
-    dot.className = 'dot dot-on';
-    lbl.textContent = walletState.demo ? '🎭 Demo' : walletState.address.slice(0, 12) + '…';
+function disconnect() {
+  state = { connected:false, demo:false, address:null, nightName:null, score:null };
+  document.getElementById('view-dashboard').classList.add('hidden');
+  document.getElementById('view-landing').classList.remove('hidden');
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+function enterDashboard() {
+  document.getElementById('view-landing').classList.add('hidden');
+  document.getElementById('view-dashboard').classList.remove('hidden');
+
+  renderHeader();
+  renderAppTiles();
+  renderAppsGrid();
+
+  if (state.demo) {
+    renderDemoScore();
   } else {
-    dot.className = 'dot dot-off';
-    lbl.textContent = 'Sign in';
+    fetchScore();
+  }
+
+  fetchFeed();
+}
+
+function renderHeader() {
+  const shortAddr = state.address
+    ? (state.address.length > 20 ? state.address.slice(0,14)+'…'+state.address.slice(-6) : state.address)
+    : '—';
+  document.getElementById('dh-name').textContent  = state.nightName || (state.demo ? '🎭 Demo Mode' : shortAddr);
+  document.getElementById('dh-addr').textContent  = state.demo ? 'Simulated data — no real funds' : state.address;
+  document.getElementById('id-name').textContent  = state.nightName || shortAddr;
+  document.getElementById('id-did').textContent   = 'did:midnight:' + (state.address||'').slice(2,22);
+  document.getElementById('id-ava').textContent   = state.demo ? '🎭' : '🌙';
+
+  // Chain badges
+  const chains = state.demo
+    ? ['⟠ ETH','◎ SOL','∞ ADA','⬛ Midnight']
+    : ['⬛ Midnight'];
+  document.getElementById('id-chains').innerHTML = chains
+    .map(c => `<span class="chain-badge">${c}</span>`).join('');
+}
+
+async function fetchScore() {
+  const addr = state.address;
+  if (!addr) return;
+
+  // Detect chain from address format
+  let chain = 'midnight';
+  if (/^0x[0-9a-fA-F]{40}$/.test(addr)) chain = 'eth';
+  else if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr)) chain = 'sol';
+  else if (addr.startsWith('addr1')) chain = 'ada';
+
+  try {
+    const res = await fetch(`${NIGHT_ID_API}/api/nightid/score/${chain}/${encodeURIComponent(addr)}`);
+    if (!res.ok) throw new Error('API not available');
+    const data = await res.json();
+    renderScore(data.totalScore ?? 0, data.breakdowns ?? [], false);
+
+    // Update header score pill
+    const lvl = getLevel(data.totalScore ?? 0);
+    document.getElementById('dh-emoji').textContent = lvl.emoji;
+    document.getElementById('dh-pts').textContent   = (data.totalScore ?? 0) + ' pts';
+    document.getElementById('dh-lvl').textContent   = lvl.name;
+
+    // Stats
+    const bd = data.breakdowns ?? [];
+    document.getElementById('sg-zk').textContent     = bd.reduce((s,b) => s + b.components.length, 0);
+    document.getElementById('sg-apps').textContent   = '—';
+    document.getElementById('sg-night').textContent  = Math.floor((data.totalScore ?? 0) / 10) + ' NIGHT';
+    document.getElementById('sg-chains').textContent = bd.length || 1;
+
+    // Night name lookup
+    const nameRes = await fetch(`${NIGHT_ID_API}/api/nightid/lookup/${encodeURIComponent(addr)}`);
+    if (nameRes.ok) {
+      const nd = await nameRes.json();
+      if (nd.name) {
+        state.nightName = nd.name;
+        document.getElementById('dh-name').textContent = nd.name;
+        document.getElementById('id-name').textContent = nd.name;
+      }
+    }
+  } catch(e) {
+    // API not running — show Midnight-only score from indexer
+    renderScore(0, [], false);
+    fetchMidnightScore(addr);
   }
 }
 
-// ── Night Score strip ─────────────────────────────────────────
-function showScoreStrip() {
-  const strip = document.getElementById('score-strip');
-  if (!strip) return;
-  strip.style.display = 'block';
-  document.getElementById('score-address').textContent = walletState.address;
-
-  // Animate score from localStorage (or demo seed)
-  const score = nightScore.score || Math.floor(Math.random() * 400) + 50;
-  const pct   = Math.min((score / 2000) * 100, 100);
-  setTimeout(() => {
-    document.getElementById('score-bar').style.width   = pct + '%';
-    document.getElementById('score-level').textContent = `Night Score: ${score}`;
-    document.getElementById('sc-hands').textContent    = nightScore.hands  || Math.floor(Math.random() * 40) + 5;
-    document.getElementById('sc-tokens').textContent   = nightScore.tokens || Math.floor(Math.random() * 8);
-    document.getElementById('sc-zk').textContent       = nightScore.zk     || Math.floor(Math.random() * 60) + 10;
-  }, 300);
+async function fetchMidnightScore(addr) {
+  const nightDeployers = [
+    'mn_addr_preprod1etmexcm6rhwqtp3a3suvfwjfp6993u0e27uraxts9k2pmt7rhlvqnu2njv',
+    'mn_addr_preprod1s74q2udqmzzpud9rdkp7txa8elx3nece3t29yn6av3tfw552wtss65llx5',
+  ];
+  let score = 0;
+  const items = [];
+  if (nightDeployers.includes(addr)) {
+    score = 275;
+    items.push({label:'Night Markets Deployer', pts:200});
+    items.push({label:'ZK Circuit Calls (6)',   pts:90});
+    items.push({label:'Full Escrow Flow',       pts:75});
+  }
+  renderScore(score, [{chain:'midnight', components: items.map(i=>({label:i.label, points:i.pts}))}], false);
+  const lvl = getLevel(score);
+  document.getElementById('dh-emoji').textContent = lvl.emoji;
+  document.getElementById('dh-pts').textContent   = score + ' pts';
+  document.getElementById('dh-lvl').textContent   = lvl.name;
+  document.getElementById('sg-zk').textContent     = '6';
+  document.getElementById('sg-apps').textContent   = '1';
+  document.getElementById('sg-night').textContent  = Math.floor(score/10) + ' NIGHT';
+  document.getElementById('sg-chains').textContent = '1';
 }
 
-// ── Modals ────────────────────────────────────────────────────
-function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
-function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+function renderDemoScore() {
+  const score = 425;
+  const breakdowns = [{
+    chain:'eth',
+    components:[
+      {label:'ETH Transactions (87)',    points:174},
+      {label:'DeFi Protocols (3)',        points:90},
+      {label:'Wallet Age (2.1 yrs)',      points:60},
+    ]
+  },{
+    chain:'midnight',
+    components:[
+      {label:'ZK Circuit Calls',         points:90},
+      {label:'Full Escrow Flow',         points:75},
+    ]
+  }];
+  renderScore(score, breakdowns, true);
+  const lvl = getLevel(score);
+  document.getElementById('dh-emoji').textContent = lvl.emoji;
+  document.getElementById('dh-pts').textContent   = score + ' pts';
+  document.getElementById('dh-lvl').textContent   = lvl.name;
+  document.getElementById('sg-zk').textContent   = '14';
+  document.getElementById('sg-apps').textContent  = '3';
+  document.getElementById('sg-night').textContent = '42 NIGHT';
+  document.getElementById('sg-chains').textContent= '2';
+  document.getElementById('demo-note').style.display = 'block';
+}
 
-// ── Wallet button ─────────────────────────────────────────────
-document.getElementById('wallet-btn')?.addEventListener('click', () => {
-  if (walletState.connected) {
-    walletState = { connected: false, demo: false, address: null };
-    updateWalletUI();
-    document.getElementById('score-strip').style.display = 'none';
-    toast('Wallet disconnected', 'info');
-  } else {
-    openModal('ov-wallet');
+function renderScore(score, breakdowns, isDemo) {
+  const lvl = getLevel(score);
+  const next = LEVELS.find(l => l.min > score) || LEVELS[LEVELS.length-1];
+  const pct  = score >= 1000 ? 100 : Math.round(((score - lvl.min) / (next.min - lvl.min)) * 100);
+
+  document.getElementById('sc-big').textContent   = score;
+  document.getElementById('sc-badge').textContent = lvl.emoji + ' ' + lvl.name;
+  document.getElementById('sc-next').textContent  = score >= 1000 ? 'Max level reached 🌟' : `${next.min - score} pts to ${next.name}`;
+  setTimeout(() => { document.getElementById('sc-fill').style.width = Math.min(pct,100) + '%'; }, 300);
+
+  const chainIcon = {eth:'⟠',sol:'◎',ada:'∞',midnight:'⬛'};
+  const items = breakdowns.flatMap(bd =>
+    bd.components.filter(c => c.points > 0).map(c => ({
+      label: (chainIcon[bd.chain]||'🔗') + ' ' + c.label,
+      pts: c.points,
+    }))
+  );
+
+  document.getElementById('sc-items').innerHTML = items.slice(0,5).map(i =>
+    `<div class="sc-item"><span class="sc-item-lbl">${i.label}</span><span class="sc-item-pts">+${i.pts}</span></div>`
+  ).join('') || '<div class="sc-item"><span class="sc-item-lbl" style="font-style:italic">No on-chain activity yet</span></div>';
+}
+
+// ── App tiles ─────────────────────────────────────────────────────────────────
+function renderAppTiles() {
+  document.getElementById('app-tiles').innerHTML = APPS.map(a =>
+    `<a class="app-tile" href="${a.url}" target="_blank">
+      <div class="at-icon">${a.icon}</div>
+      <div class="at-name">${a.name.replace('Night ','')}</div>
+      <div class="at-tag">${a.tag}</div>
+    </a>`
+  ).join('');
+}
+
+function renderAppsGrid() {
+  document.getElementById('apps-grid-full').innerHTML = APPS.map(a =>
+    `<a class="agf-card" href="${a.url}" target="_blank">
+      <div class="agf-icon">${a.icon}</div>
+      <div class="agf-name">${a.name}</div>
+      <div class="agf-tag">${a.tag}</div>
+      <div class="agf-desc">${a.desc}</div>
+      <div class="agf-cta">Open app →</div>
+    </a>`
+  ).join('');
+}
+
+// ── Live feed ─────────────────────────────────────────────────────────────────
+const FEED_LABELS = {
+  ContractDeploy: { icon:'🚀', label:'Contract Deployed', color:'var(--glow)' },
+  ContractCall:   { icon:'⚡', label:'ZK Circuit Call',   color:'var(--cyan)' },
+  ContractUpdate: { icon:'🔄', label:'Contract Updated',  color:'var(--plasma)' },
+};
+
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (s < 60)    return s + 's ago';
+  if (s < 3600)  return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+async function fetchFeed() {
+  const dot    = document.getElementById('feed-dot');
+  const status = document.getElementById('feed-status');
+  try {
+    const res = await fetch(MIDNIGHT_INDEX, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ query:`
+        query{contractActions(contractAddress:"${NIGHT_CONTRACT}",first:12){nodes{
+          __typename
+          ...on ContractDeploy{transaction{hash block{height timestamp}}}
+          ...on ContractCall{transaction{hash block{height timestamp}}}
+          ...on ContractUpdate{transaction{hash block{height timestamp}}}
+        }}}
+      `}),
+    });
+    const data  = await res.json();
+    const nodes = data?.data?.contractActions?.nodes ?? [];
+    const events = nodes.map(n => ({
+      type: n.__typename,
+      block: n.transaction?.block?.height,
+      time:  n.transaction?.block?.timestamp,
+    }));
+
+    dot.style.color = 'var(--green)';
+    status.textContent = 'live · ' + events.length + ' events';
+
+    const html = events.length ? events.slice(0,8).map(ev => {
+      const m = FEED_LABELS[ev.type] || {icon:'📋', label:ev.type, color:'var(--text2)'};
+      return `<div class="feed-item">
+        <div class="fi-icon">${m.icon}</div>
+        <div class="fi-info">
+          <div class="fi-label" style="color:${m.color}">${m.label}</div>
+          <div class="fi-detail">Night Markets Escrow${ev.block ? ' · Block #'+ev.block : ''}</div>
+        </div>
+        <div class="fi-time">${ev.time ? timeAgo(ev.time) : ''}</div>
+      </div>`;
+    }).join('') : '<div class="feed-empty">No recent events — contract is live and waiting 🌙</div>';
+
+    document.getElementById('feed-home').innerHTML     = html;
+    document.getElementById('feed-activity').innerHTML = html;
+  } catch(e) {
+    dot.style.color = 'var(--muted)';
+    status.textContent = 'indexer offline';
+    document.getElementById('feed-home').innerHTML     = '<div class="feed-empty">Midnight indexer offline</div>';
+    document.getElementById('feed-activity').innerHTML = '<div class="feed-empty">Midnight indexer offline</div>';
   }
-});
+}
 
-// ── Init ──────────────────────────────────────────────────────
+// ── Tab switcher ──────────────────────────────────────────────────────────────
+function setTab(name) {
+  ['home','apps','activity'].forEach(t => {
+    document.getElementById('tab-'+t)?.classList.toggle('hidden', t !== name);
+    document.getElementById('sb-'+t)?.classList.toggle('active', t === name);
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  updateWalletUI();
+  initLanding();
+  // Midnight wallet detection
+  window.addEventListener('midnight#ready', () => {});
 });
