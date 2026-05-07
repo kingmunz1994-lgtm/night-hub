@@ -1,7 +1,7 @@
 // ── Night Hub ─────────────────────────────────────────────────────────────────
 
 const NIGHT_ID_API   = 'https://night-id-api.fly.dev';
-const MIDNIGHT_INDEX = 'https://indexer.preprod.midnight.network/api/v3/graphql';
+const MIDNIGHT_INDEX = 'https://indexer.preprod.midnight.network/api/v4/graphql';
 const NIGHT_CONTRACT = '7473b82b398f6b8665541862a1165c6c5da379355f9c32dace36ed234b7cc711';
 
 // ── App registry ──────────────────────────────────────────────────────────────
@@ -34,6 +34,10 @@ let state = { connected:false, demo:false, address:null, nightName:null, score:n
 
 // ── Landing init ──────────────────────────────────────────────────────────────
 function initLanding() {
+  // Sync app count in section heading
+  const countEl = document.getElementById('app-count');
+  if (countEl) countEl.textContent = APPS.length;
+
   // App strip (doubled for infinite scroll)
   const strip = document.getElementById('l-strip');
   if (strip) {
