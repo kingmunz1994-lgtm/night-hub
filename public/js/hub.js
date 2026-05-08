@@ -1,6 +1,6 @@
 // ── Night Hub ─────────────────────────────────────────────────────────────────
 
-const NIGHT_ID_API   = 'https://night-id-api.fly.dev';
+const NIGHT_ID_API   = 'https://night-markets-production.up.railway.app';
 const MIDNIGHT_INDEX = 'https://indexer.preprod.midnight.network/api/v4/graphql';
 const NIGHT_CONTRACT = '7473b82b398f6b8665541862a1165c6c5da379355f9c32dace36ed234b7cc711';
 
