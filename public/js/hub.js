@@ -174,28 +174,35 @@ async function fetchScore() {
   else if (addr.startsWith('addr1')) chain = 'ada';
 
   try {
-    const res = await fetch(`${NIGHT_ID_API}/api/nightid/score/${chain}/${encodeURIComponent(addr)}`);
-    if (!res.ok) throw new Error('API not available');
-    const data = await res.json();
-    renderScore(data.totalScore ?? 0, data.breakdowns ?? [], false);
+    const [chainRes, appRes, nameRes] = await Promise.allSettled([
+      fetch(`${NIGHT_ID_API}/api/nightid/score/${chain}/${encodeURIComponent(addr)}`),
+      fetch(`${NIGHT_ID_API}/api/nightid/action-score/${encodeURIComponent(addr)}`),
+      fetch(`${NIGHT_ID_API}/api/nightid/lookup/${encodeURIComponent(addr)}`),
+    ]);
+
+    if (chainRes.status === 'rejected' || !chainRes.value.ok) throw new Error('API not available');
+    const data    = await chainRes.value.json();
+    const appData = appRes.status === 'fulfilled' && appRes.value.ok ? await appRes.value.json() : null;
+
+    renderScore(data.totalScore ?? 0, data.breakdowns ?? [], false, appData?.byApp ?? {});
 
     // Update header score pill
-    const lvl = getLevel(data.totalScore ?? 0);
+    const total = data.totalScore ?? 0;
+    const lvl   = getLevel(total);
     document.getElementById('dh-emoji').textContent = lvl.emoji;
-    document.getElementById('dh-pts').textContent   = (data.totalScore ?? 0) + ' pts';
+    document.getElementById('dh-pts').textContent   = total + ' pts';
     document.getElementById('dh-lvl').textContent   = lvl.name;
 
     // Stats
     const bd = data.breakdowns ?? [];
     document.getElementById('sg-zk').textContent     = bd.reduce((s,b) => s + b.components.length, 0);
-    document.getElementById('sg-apps').textContent   = '—';
-    document.getElementById('sg-night').textContent  = Math.floor((data.totalScore ?? 0) / 10) + ' NIGHT';
+    document.getElementById('sg-apps').textContent   = appData?.appsUsed ?? '—';
+    document.getElementById('sg-night').textContent  = Math.floor(total / 10) + ' NIGHT';
     document.getElementById('sg-chains').textContent = bd.length || 1;
 
-    // Night name lookup
-    const nameRes = await fetch(`${NIGHT_ID_API}/api/nightid/lookup/${encodeURIComponent(addr)}`);
-    if (nameRes.ok) {
-      const nd = await nameRes.json();
+    // Night name
+    if (nameRes.status === 'fulfilled' && nameRes.value.ok) {
+      const nd = await nameRes.value.json();
       if (nd.name) {
         state.nightName = nd.name;
         document.getElementById('dh-name').textContent = nd.name;
@@ -204,7 +211,7 @@ async function fetchScore() {
     }
   } catch(e) {
     // API not running — show Midnight-only score from indexer
-    renderScore(0, [], false);
+    renderScore(0, [], false, {});
     fetchMidnightScore(addr);
   }
 }
@@ -261,8 +268,13 @@ function renderDemoScore() {
   document.getElementById('demo-note').style.display = 'block';
 }
 
-function renderScore(score, breakdowns, isDemo) {
-  const lvl = getLevel(score);
+const APP_ICONS = {
+  'night-markets':'🛒','night-poker':'🃏','night-fun':'🚀','night-id':'🪪',
+  'night-lend':'💸','night-save':'🏦','night-work':'⚙️','night-biz':'🏢',
+};
+
+function renderScore(score, breakdowns, isDemo, byApp = {}) {
+  const lvl  = getLevel(score);
   const next = LEVELS.find(l => l.min > score) || LEVELS[LEVELS.length-1];
   const pct  = score >= 1000 ? 100 : Math.round(((score - lvl.min) / (next.min - lvl.min)) * 100);
 
@@ -272,16 +284,27 @@ function renderScore(score, breakdowns, isDemo) {
   setTimeout(() => { document.getElementById('sc-fill').style.width = Math.min(pct,100) + '%'; }, 300);
 
   const chainIcon = {eth:'⟠',sol:'◎',ada:'∞',midnight:'⬛'};
-  const items = breakdowns.flatMap(bd =>
+  const chainItems = breakdowns.flatMap(bd =>
     bd.components.filter(c => c.points > 0).map(c => ({
       label: (chainIcon[bd.chain]||'🔗') + ' ' + c.label,
       pts: c.points,
     }))
   );
 
-  document.getElementById('sc-items').innerHTML = items.slice(0,5).map(i =>
-    `<div class="sc-item"><span class="sc-item-lbl">${i.label}</span><span class="sc-item-pts">+${i.pts}</span></div>`
-  ).join('') || '<div class="sc-item"><span class="sc-item-lbl" style="font-style:italic">No on-chain activity yet</span></div>';
+  const appItems = Object.entries(byApp)
+    .filter(([, pts]) => pts > 0)
+    .sort(([, a], [, b]) => b - a)
+    .map(([appId, pts]) => ({
+      label: (APP_ICONS[appId] || '⬛') + ' ' + appId.replace('night-', 'Night ').replace(/\b\w/g, c => c.toUpperCase()),
+      pts,
+    }));
+
+  const allItems = [...chainItems, ...appItems];
+  document.getElementById('sc-items').innerHTML =
+    allItems.slice(0, 6).map(i =>
+      `<div class="sc-item"><span class="sc-item-lbl">${i.label}</span><span class="sc-item-pts">+${i.pts}</span></div>`
+    ).join('') ||
+    '<div class="sc-item"><span class="sc-item-lbl" style="font-style:italic">No on-chain activity yet</span></div>';
 }
 
 // ── App tiles ─────────────────────────────────────────────────────────────────
