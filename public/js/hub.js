@@ -14,7 +14,7 @@ const APPS = [
   { id:'save',    icon:'🏦', name:'Night Save',    tag:'ZK vault + sUSD',          url:'https://kingmunz1994-lgtm.github.io/night-save/',   desc:'Deposit NIGHT, mint sUSD stablecoin. Prove vault health in ZK. BNPL instalments included.' },
   { id:'work',    icon:'⚙️',  name:'Night Work',    tag:'ZK task marketplace',      url:'https://kingmunz1994-lgtm.github.io/night-work/',   desc:'AI agents post bounties. Humans earn NIGHT completing them. Worker identities are ZK commitments.' },
   { id:'biz',     icon:'🏢', name:'Night Biz',     tag:'ZK loyalty tokens',        url:'https://kingmunz1994-lgtm.github.io/night-biz/',    desc:'Any business issues private loyalty tokens. Customers prove Bronze/Silver/Gold/Platinum tier without revealing balance.' },
-  { id:'store',   icon:'👕', name:'Night Store',   tag:'ZK merch shop',            url:'https://kingmunz1994-lgtm.github.io/night-store/',  desc:'Branded merch storefront. 50% of every sale flows automatically to token holders via Night Fun revenue circuits.' },
+  { id:'store',   icon:'🛍️', name:'Night Store',   tag:'Pay with NIGHT',           url:'https://kingmunz1994-lgtm.github.io/night-store/',  desc:'Official Night Markets merch — tees, hoodies, caps, mugs, totes. Pay with your Night Score NIGHT balance. Printed by Printful, shipped worldwide.' },
 ];
 
 const LEVELS = [
@@ -34,7 +34,8 @@ let state = { connected:false, demo:false, address:null, nightName:null, score:n
 
 // ── Landing init ──────────────────────────────────────────────────────────────
 function initLanding() {
-  // Sync app count in section heading
+  // Sync app count everywhere it appears
+  document.querySelectorAll('.app-count-dyn').forEach(el => el.textContent = APPS.length);
   const countEl = document.getElementById('app-count');
   if (countEl) countEl.textContent = APPS.length;
 
@@ -197,7 +198,7 @@ async function fetchScore() {
     const bd = data.breakdowns ?? [];
     document.getElementById('sg-zk').textContent     = bd.reduce((s,b) => s + b.components.length, 0);
     document.getElementById('sg-apps').textContent   = appData?.appsUsed ?? '—';
-    document.getElementById('sg-night').textContent  = Math.floor(total / 10) + ' NIGHT';
+    document.getElementById('sg-night').textContent  = (appData?.total ?? total) + ' NIGHT';
     document.getElementById('sg-chains').textContent = bd.length || 1;
 
     // Night name
@@ -256,14 +257,19 @@ function renderDemoScore() {
       {label:'Full Escrow Flow',         points:75},
     ]
   }];
-  renderScore(score, breakdowns, true);
+  const demoByApp = {
+    'night-markets': 50,
+    'night-poker':   15,
+    'night-store':   5,
+  };
+  renderScore(score, breakdowns, true, demoByApp);
   const lvl = getLevel(score);
   document.getElementById('dh-emoji').textContent = lvl.emoji;
   document.getElementById('dh-pts').textContent   = score + ' pts';
   document.getElementById('dh-lvl').textContent   = lvl.name;
-  document.getElementById('sg-zk').textContent   = '14';
+  document.getElementById('sg-zk').textContent    = '14';
   document.getElementById('sg-apps').textContent  = '3';
-  document.getElementById('sg-night').textContent = '42 NIGHT';
+  document.getElementById('sg-night').textContent = '355 NIGHT';
   document.getElementById('sg-chains').textContent= '2';
   document.getElementById('demo-note').style.display = 'block';
 }
@@ -271,6 +277,7 @@ function renderDemoScore() {
 const APP_ICONS = {
   'night-markets':'🛒','night-poker':'🃏','night-fun':'🚀','night-id':'🪪',
   'night-lend':'💸','night-save':'🏦','night-work':'⚙️','night-biz':'🏢',
+  'night-store':'🛍️',
 };
 
 function renderScore(score, breakdowns, isDemo, byApp = {}) {
