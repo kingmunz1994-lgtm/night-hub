@@ -67,6 +67,8 @@ function initLanding() {
       `<a href="${a.url}" target="_blank">${a.name.replace('Night ','')}</a>`
     ).join('');
   }
+
+  fetchPokerCount();
 }
 
 // ── Connect modal ─────────────────────────────────────────────────────────────
@@ -144,6 +146,7 @@ function enterDashboard() {
   }
 
   fetchFeed();
+  fetchPokerCount();
 }
 
 function renderHeader() {
@@ -198,7 +201,7 @@ async function fetchScore() {
     const bd = data.breakdowns ?? [];
     document.getElementById('sg-zk').textContent     = bd.reduce((s,b) => s + b.components.length, 0);
     document.getElementById('sg-apps').textContent   = appData?.appsUsed ?? '—';
-    document.getElementById('sg-night').textContent  = (appData?.total ?? total) + ' NIGHT';
+    document.getElementById('sg-night').textContent  = (appData?.available ?? appData?.total ?? total) + ' NIGHT';
     document.getElementById('sg-chains').textContent = bd.length || 1;
 
     // Night name
@@ -335,6 +338,23 @@ function renderAppsGrid() {
       <div class="agf-cta">Open app →</div>
     </a>`
   ).join('');
+}
+
+// ── Live poker count ─────────────────────────────────────────────────────────
+async function fetchPokerCount() {
+  try {
+    const res    = await fetch(`${NIGHT_ID_API}/api/poker/tables`);
+    const tables = await res.json();
+    const arr    = Array.isArray(tables) ? tables : (tables.tables ?? []);
+    const count  = arr.length;
+    const label  = `🃏 ${count} poker table${count !== 1 ? 's' : ''} live`;
+
+    const badge = document.querySelector('.l-badge');
+    if (badge) badge.innerHTML = `<span class="pdot"></span>Midnight Network · Kūkolu Mainnet · Live &nbsp;·&nbsp; ${label}`;
+
+    const el = document.getElementById('poker-count-live');
+    if (el) el.textContent = label;
+  } catch(e) {}
 }
 
 // ── Live feed ─────────────────────────────────────────────────────────────────
