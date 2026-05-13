@@ -147,6 +147,7 @@ function enterDashboard() {
 
   fetchFeed();
   fetchPokerCount();
+  fetchLeaderboard();
 }
 
 function renderHeader() {
@@ -418,6 +419,37 @@ async function fetchFeed() {
     status.textContent = 'indexer offline';
     document.getElementById('feed-home').innerHTML     = '<div class="feed-empty">Midnight indexer offline</div>';
     document.getElementById('feed-activity').innerHTML = '<div class="feed-empty">Midnight indexer offline</div>';
+  }
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+async function fetchLeaderboard() {
+  const el  = document.getElementById('leaderboard-list');
+  const dot = document.getElementById('lb-dot');
+  if (!el) return;
+  try {
+    const res = await fetch(`${NIGHT_ID_API}/api/nightid/leaderboard?limit=10`);
+    if (!res.ok) throw new Error('API error');
+    const { leaderboard } = await res.json();
+    if (dot) dot.style.color = 'var(--green)';
+    if (!leaderboard.length) {
+      el.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>';
+      return;
+    }
+    el.innerHTML = leaderboard.map(({ rank, address, score }) => {
+      const short  = address.length > 20 ? address.slice(0,10)+'…'+address.slice(-6) : address;
+      const lvl    = getLevel(score);
+      const medal  = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '#'+rank;
+      return `<div class="lb-row">
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-addr">${short}</div>
+        <div class="lb-lvl">${lvl.emoji} ${lvl.name}</div>
+        <div class="lb-score">${score} pts</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if (dot) dot.style.color = 'var(--muted)';
+    el.innerHTML = '<div class="lb-empty">Leaderboard unavailable</div>';
   }
 }
 
