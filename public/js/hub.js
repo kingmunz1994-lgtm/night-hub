@@ -149,6 +149,7 @@ function enterDashboard() {
   fetchFeed();
   fetchPokerCount();
   fetchLeaderboard();
+  fetchSharePanel();
 }
 
 function renderHeader() {
@@ -538,6 +539,54 @@ async function fetchLeaderboard() {
   } catch(e) {
     if (dot) dot.style.color = 'var(--muted)';
     el.innerHTML = '<div class="lb-empty">Leaderboard unavailable</div>';
+  }
+}
+
+// ── Night Share ───────────────────────────────────────────────────────────────
+async function fetchSharePanel() {
+  const dot     = document.getElementById('share-dot');
+  const poolVal = document.getElementById('share-pool-val');
+  const poolSub = document.getElementById('share-pool-sub');
+  const yourVal = document.getElementById('share-your-val');
+  const yourPct = document.getElementById('share-your-pct');
+  if (!poolVal) return;
+  try {
+    const [poolRes, shareRes] = await Promise.all([
+      fetch(`${NIGHT_ID_API}/api/revenue/pool`),
+      state.address
+        ? fetch(`${NIGHT_ID_API}/api/revenue/share/${encodeURIComponent(state.address)}`)
+        : Promise.resolve(null),
+    ]);
+    if (!poolRes.ok) throw new Error('pool unavailable');
+    const pool = await poolRes.json();
+    if (dot) dot.style.color = 'var(--green)';
+
+    if (pool.currentEpoch) {
+      const e = pool.currentEpoch;
+      const dust = (e.balance / 1_000_000).toFixed(2);
+      poolVal.textContent = `${dust} DUST`;
+      const status = e.state === 'collecting' ? `collecting · ${e.contributors} contributors` : `finalized · claimable`;
+      poolSub.textContent = status;
+    } else {
+      poolVal.textContent = '0 DUST';
+      poolSub.textContent = 'no active epoch';
+    }
+
+    if (shareRes && shareRes.ok) {
+      const share = await shareRes.json();
+      const dustAmt = (share.estimatedShare / 1_000_000).toFixed(4);
+      yourVal.textContent = share.claimed ? 'Claimed ✓' : `~${dustAmt} DUST`;
+      yourPct.textContent = share.myScore > 0
+        ? `${share.sharePercent}% · ${share.myScore} pts`
+        : 'Earn Night Score to receive a share';
+    } else {
+      yourVal.textContent = state.demo ? '~0.0042 DUST' : '—';
+      yourPct.textContent = state.demo ? '0.12% · 42 pts (demo)' : 'Connect wallet to see your share';
+    }
+  } catch {
+    if (dot) dot.style.color = 'var(--muted)';
+    if (poolVal) poolVal.textContent = '—';
+    if (poolSub) poolSub.textContent = 'unavailable';
   }
 }
 

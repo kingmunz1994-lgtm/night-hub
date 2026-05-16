@@ -227,6 +227,22 @@ button{font-family:var(--sans);cursor:pointer;}
 .lb-score{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--glow);white-space:nowrap;}
 .lb-empty{font-size:12px;font-family:var(--mono);color:var(--muted);padding:20px;text-align:center;background:var(--surface);border:1px solid var(--rim);border-radius:10px;}
 
+/* ── Night Share ──────────────────────────────────────────────────────────── */
+.share-panel{display:grid;grid-template-columns:1fr auto 1fr auto 2fr;align-items:start;gap:0;background:var(--surface);border:1px solid var(--rim);border-radius:16px;padding:24px 28px;margin-bottom:32px;}
+.share-divider{width:1px;background:var(--rim2);align-self:stretch;margin:0 24px;}
+.share-pool-lbl,.share-your-lbl,.share-how-lbl{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
+.share-pool-val{font-size:28px;font-weight:700;font-family:var(--mono);color:var(--green);margin-bottom:4px;}
+.share-pool-sub{font-size:10px;font-family:var(--mono);color:var(--muted);}
+.share-your-val{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--glow);margin-bottom:4px;}
+.share-your-pct{font-size:10px;font-family:var(--mono);color:var(--text2);}
+.share-how-lines{display:flex;flex-direction:column;gap:8px;}
+.share-how-line{font-size:11px;color:var(--text2);line-height:1.5;display:flex;align-items:flex-start;gap:8px;}
+.sh-dot{width:5px;height:5px;border-radius:50%;background:var(--purple);flex-shrink:0;margin-top:5px;}
+@media(max-width:900px){
+  .share-panel{grid-template-columns:1fr;gap:20px;}
+  .share-divider{width:100%;height:1px;margin:0;}
+}
+
 /* ══ RESPONSIVE ═══════════════════════════════════════════════════════════════ */
 @media(max-width:1100px){.app-tiles{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:900px){.card-row{grid-template-columns:1fr 1fr;}}
