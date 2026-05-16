@@ -431,6 +431,7 @@ const CATEGORY_LABELS = {
   finance:    { label: 'Finance',     icon: '💰' },
   compliance: { label: 'Compliance',  icon: '📋' },
   ai:         { label: 'AI & Agents', icon: '🤖' },
+  learn:      { label: 'Learn',       icon: '📖' },
 };
 
 let _communityApps = [];
@@ -466,7 +467,31 @@ function renderCommunitySection() {
     }).join('');
   }
 
-  grid.innerHTML = filtered.map(a => `
+  grid.innerHTML = filtered.map(a => {
+    if (a.featured && a.tldr) {
+      const bullets = a.tldr.map(line => {
+        const formatted = line.replace(/^(Layer \d+[^:]+:)/, '<strong>$1</strong>').replace(/^(\d+%)/, '<strong>$1</strong>').replace(/^(Chapter \d+[^—]+—)/, '<strong>$1</strong>');
+        return `<li>${formatted}</li>`;
+      }).join('');
+      return `
+        <a class="cm-card cm-featured" href="${a.url}" target="_blank" rel="noopener">
+          <div class="cm-featured-left">
+            <div class="cm-top">
+              <div class="cm-icon">${a.icon}</div>
+              ${a.stars > 0 ? `<div class="cm-stars">★ ${a.stars}</div>` : ''}
+            </div>
+            <div class="cm-name">${a.name}</div>
+            <div class="cm-owner">by ${a.owner}</div>
+            <div class="cm-tag">${a.tag}</div>
+            <div class="cm-desc">${a.desc}</div>
+          </div>
+          <div class="cm-featured-right">
+            <div class="cm-tldr-title">TL;DR — The 7 Layers</div>
+            <ul class="cm-tldr">${bullets}</ul>
+          </div>
+        </a>`;
+    }
+    return `
     <a class="cm-card" href="${a.url}" target="_blank" rel="noopener">
       <div class="cm-top">
         <div class="cm-icon">${a.icon}</div>
@@ -476,8 +501,8 @@ function renderCommunitySection() {
       <div class="cm-owner">by ${a.owner}</div>
       <div class="cm-tag">${a.tag}</div>
       <div class="cm-desc">${a.desc}</div>
-    </a>
-  `).join('') || '<div class="lb-empty">No projects in this category yet.</div>';
+    </a>`;
+  }).join('') || '<div class="lb-empty">No projects in this category yet.</div>';
 }
 
 function setCommunityFilter(cat) {

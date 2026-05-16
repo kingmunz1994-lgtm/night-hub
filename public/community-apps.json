@@ -1,5 +1,27 @@
 [
   {
+    "name": "Proving Nothing — Seven Layer",
+    "owner": "Charles Hoskinson",
+    "repo": "CharlesHoskinson/sevenlayer",
+    "url": "https://github.com/CharlesHoskinson/sevenlayer",
+    "icon": "📖",
+    "tag": "ZK systems deep-dive",
+    "desc": "The definitive guide to zero-knowledge proof systems. 14 chapters — setup ceremony to on-chain verifier. Midnight case study included. Read time: 45 min (exec) → 4 hrs (researcher).",
+    "category": "learn",
+    "stars": 0,
+    "active": true,
+    "featured": true,
+    "tldr": [
+      "ZK proofs don't eliminate trust — they decompose it into 7 independently-auditable layers",
+      "Layer 1 Setup: trusted vs transparent ceremony creates the mathematical stage",
+      "Layers 2–4: Language → Witness generation → Arithmetization (constraint encoding)",
+      "Layers 5–7: Proof system → Cryptographic primitives → On-chain verifier",
+      "67% of real-world ZK bugs come from under-constrained circuits (layer 4)",
+      "One weak layer breaks the whole chain — each has its own distinct failure modes",
+      "Chapter 13 is a full Midnight Network case study — directly relevant to this ecosystem"
+    ]
+  },
+  {
     "name": "Sea Battle",
     "owner": "Brick Towers",
     "repo": "bricktowers/midnight-seabattle",
