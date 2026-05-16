@@ -69,6 +69,7 @@ function initLanding() {
   }
 
   fetchPokerCount();
+  fetchCommunityApps();
 }
 
 // ── Connect modal ─────────────────────────────────────────────────────────────
@@ -420,6 +421,68 @@ async function fetchFeed() {
     document.getElementById('feed-home').innerHTML     = '<div class="feed-empty">Midnight indexer offline</div>';
     document.getElementById('feed-activity').innerHTML = '<div class="feed-empty">Midnight indexer offline</div>';
   }
+}
+
+// ── Community apps directory ──────────────────────────────────────────────────
+const CATEGORY_LABELS = {
+  tools:      { label: 'Dev Tools',   icon: '🛠️' },
+  games:      { label: 'Games',       icon: '🎮' },
+  identity:   { label: 'Identity',    icon: '🪪' },
+  finance:    { label: 'Finance',     icon: '💰' },
+  compliance: { label: 'Compliance',  icon: '📋' },
+  ai:         { label: 'AI & Agents', icon: '🤖' },
+};
+
+let _communityApps = [];
+let _communityFilter = 'all';
+
+async function fetchCommunityApps() {
+  try {
+    const res = await fetch('community-apps.json');
+    _communityApps = await res.json();
+    renderCommunitySection();
+  } catch(e) {}
+}
+
+function renderCommunitySection() {
+  const grid = document.getElementById('community-grid');
+  const count = document.getElementById('community-count');
+  if (!grid) return;
+
+  const filtered = _communityFilter === 'all'
+    ? _communityApps
+    : _communityApps.filter(a => a.category === _communityFilter);
+
+  if (count) count.textContent = _communityApps.length;
+
+  // Filter chips
+  const chips = document.getElementById('community-filters');
+  if (chips) {
+    const cats = ['all', ...Object.keys(CATEGORY_LABELS)];
+    chips.innerHTML = cats.map(c => {
+      const active = c === _communityFilter;
+      const lbl = c === 'all' ? 'All' : CATEGORY_LABELS[c].label;
+      return `<button class="cf-chip${active?' active':''}" onclick="setCommunityFilter('${c}')">${lbl}</button>`;
+    }).join('');
+  }
+
+  grid.innerHTML = filtered.map(a => `
+    <a class="cm-card" href="${a.url}" target="_blank" rel="noopener">
+      <div class="cm-top">
+        <div class="cm-icon">${a.icon}</div>
+        <div class="cm-stars">${a.stars > 0 ? '★ '+a.stars : ''}</div>
+      </div>
+      <div class="cm-name">${a.name}</div>
+      <div class="cm-owner">by ${a.owner}</div>
+      <div class="cm-tag">${a.tag}</div>
+      <div class="cm-desc">${a.desc}</div>
+    </a>
+  `).join('') || '<div class="lb-empty">No projects in this category yet.</div>';
+}
+
+function setCommunityFilter(cat) {
+  _communityFilter = cat;
+  renderCommunitySection();
 }
 
 // ── Leaderboard ───────────────────────────────────────────────────────────────
